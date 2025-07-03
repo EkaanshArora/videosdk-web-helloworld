@@ -1,5 +1,5 @@
 import ZoomVideo, { VideoPlayer, VideoQuality } from "@zoom/videosdk";
-import { generateSignature } from "./utils";
+import { generateSignature, getBitmap } from "./utils";
 import "./style.css";
 
 // You should sign your JWT with a backend service in a production use-case
@@ -22,8 +22,22 @@ const startCall = async () => {
   const mediaStream = client.getMediaStream();
   await mediaStream.startAudio();
   await mediaStream.startVideo();
+
+  const processor = await mediaStream.createProcessor({
+    name: "watermark-processor",
+    type: "video",
+    url: window.location.origin + "/watermark-new.js",
+    options: {},
+  });
+  // Add a processor
+  await mediaStream.addProcessor(processor);
   // render the video of the current user
   await renderVideo({ action: 'Start', userId: client.getCurrentUserInfo().userId });
+  const data = await getBitmap("Hello world!"); // create a bitmap image from text
+  processor.port.postMessage({
+    cmd: "update_watermark_image",
+    data: data,
+  });
 };
 
 const renderVideo = async (event: { action: "Start" | "Stop"; userId: number; }) => {
